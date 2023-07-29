@@ -7,8 +7,9 @@
 # @version	0.1
 #
 
-
+#
 # Define ANSI escape codes for colors
+#
 GREEN='\033[32m'
 B_GREEN='\033[32;1m'
 BLUE='\033[34m'
@@ -30,7 +31,7 @@ Available commands:
 
 help                        Show this help
 
-Use "analytx [COMMAND] --help" for more information about a command.
+Use "analytx --help" for more information about a command.
 EOF
 
     echo "${help}"
@@ -60,10 +61,18 @@ if [[ $domain == '' ]]; then
     exit
 fi
 
+#
+# Display the logo
+#
+logo
+echo -e "\n${CYAN} Analyzing ${NC} ${domain}"
+
 A=$(dig "${domain}" +short A | grep -v "Warning: Client COOKIE mismatch")
 NS=$(dig "${domain}" +short NS | grep -v "Warning: Client COOKIE mismatch")
 MX=$(dig "${domain}" +short MX | grep -v "Warning: Client COOKIE mismatch")
 whois_output=$(whois "$domain")
+registrar=$(echo "${whois_output}" | grep -i -m 1 "Registrar:" | sed 's/Registrar://I' | awk '{$1=$1};1')
+registrant=$(echo "${whois_output}" | awk -F ':' '/Registrant Name/{print $2}' | sed 's/^\s*//')
 
 
 if [ -z "$A" ]; then
@@ -93,26 +102,25 @@ else
 fi
 
 #
-# Display the logo
-#
-logo
+
 echo -e "
-${CYAN} Analyzing ${NC} ${domain}
+${BLUE}A Record${NC}\n${A} 
 
-${BLUE}A Record:${NC}\n${A} 
+${BLUE}NS Record${NC}\n${NS} 
 
-${BLUE}NS Record:${NC}\n${NS} 
+${BLUE}MX Record${NC}\n${MX} 
 
-${BLUE}MX Record:${NC}\n${MX} 
+${BLUE}Whois${NC}
+Status: ${whois_output}
+Registrar: ${registrar}
+Owner: ${registrant}
+Access: www.${domain}
 
-${BLUE}Whois:${NC}\n${whois_output}
-
-${BLUE}Access:${NC}\nwww.${domain}
-
-${BLUE}SSL Certificate:${NC}\n${ssl_status}
+${BLUE}SSL Certificate${NC}
+Status: ${ssl_status}
 "
 pageload=$(curl -s -w '%{time_total}' -o /dev/null "${domain}")
-echo  -e "${BLUE}PageLoad:${NC}\n${pageload}\n"
+echo  -e "${BLUE}PageLoad${NC}\n${pageload}\n"
 
 
 
