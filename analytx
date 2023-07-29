@@ -10,7 +10,7 @@
 
 # Define ANSI escape codes for colors
 GREEN='\033[32m'
-B_GREEN='\u001b[32;1m'
+B_GREEN='\033[32;1m'
 BLUE='\033[34m'
 YELLOW='\033[33m'
 PINK='\033[35m'
@@ -78,9 +78,9 @@ fi
 
 
 if [[ "$whois_output" == *"No match for"* ]]; then
-  whois_output="${RED}Not registered${NC}"
+  whois_output="Not registered"
 else
-  whois_output="${B_GREEN}Registered${NC}"
+  whois_output="Registered"
 fi
 
 check_ssl=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -checkend 0 -noout)
@@ -99,20 +99,20 @@ logo
 echo -e "
 ${CYAN} Analyzing ${NC} ${domain}
 
-${WHITE_BOLD}A Entry:${NC}\n${A} 
+${BLUE}A Record:${NC}\n${A} 
 
-${WHITE_BOLD}NS Entry:${NC}\n${NS} 
+${BLUE}NS Record:${NC}\n${NS} 
 
-${WHITE_BOLD}MX Entry:${NC}\n${MX} 
+${BLUE}MX Record:${NC}\n${MX} 
 
-${WHITE_BOLD}Whois:${NC}\n${whois_output}
+${BLUE}Whois:${NC}\n${whois_output}
 
-${WHITE_BOLD}Access:${NC}\nwww.${domain}
+${BLUE}Access:${NC}\nwww.${domain}
 
-${WHITE_BOLD}SSL Certificate:${NC}\n${ssl_status}
+${BLUE}SSL Certificate:${NC}\n${ssl_status}
 "
 pageload=$(curl -s -w '%{time_total}' -o /dev/null "${domain}")
-echo  -e "${WHITE_BOLD}PageLoad:${NC}\n${pageload}\n"
+echo  -e "${BLUE}PageLoad:${NC}\n${pageload}\n"
 
 
 
