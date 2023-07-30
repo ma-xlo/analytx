@@ -84,9 +84,10 @@ logo
 echo -e "\e[?25l"
 
 #
-# Loading queries process
+# Loading queries 
 #
 loading &
+loadingPid=$!
 
 #
 # dig command
@@ -130,9 +131,9 @@ pageload=$(curl -s -w 'Lookup Time:\t\t%{time_namelookup}\nConnect Time:\t\t%{ti
 #
 # Printing domain info
 #
-kill $!
+kill "$loadingPid"
 echo -ne "\r"
-echo -ne "${CYAN_B} \r Analyzing ✔ ${DEFAULT_COLOR} ${domain}\n"
+echo -ne "${CYAN_B} \r Completed ✔ ${DEFAULT_COLOR} ${domain}\n"
 
 echo -e "
 ${BLUE}A Record${DEFAULT_COLOR}\n${A} 
@@ -150,8 +151,8 @@ Person: ${person}
 Access: \e[4mwww.${domain}\e[0m
 
 ${BLUE}SSL Certificate${DEFAULT_COLOR}
-Issuer: ${ssl_issuer}
 Status: ${ssl_status}
+Issuer: ${ssl_issuer}
 Date: ${ssl_dates}"
 
 echo -e "
