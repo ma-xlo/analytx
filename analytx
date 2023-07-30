@@ -8,20 +8,18 @@
 #
 
 #
-# Define ANSI escape codes for colors
+# Define constants variables
 #
-GREEN='\033[32m'
-B_GREEN='\033[32;1m'
 BLUE='\033[34m'
-YELLOW='\033[33m'
 PINK='\033[35m'
-RED='\033[31;47m'
-CYAN='\033[30;46m'
+CYAN_B='\033[30;46m'
+WHITE_BACKGROUND='\033[30;47m'
+DEFAULT_COLOR='\033[0m'
+VERSION='0.1.1'
 
-HEADER_COLOR='\033[30;47m'
-WHITE_BOLD='\033[1m'
-NC='\033[0m'
-
+#
+# Methods
+#
 function showHelp() {
     read -r -d '' help <<EOF
 usage: analytx [DOMAIN] 
@@ -45,16 +43,34 @@ function logo() {
     echo "\\ \\  __ \\  \\ \\ \\-.  \\  \\ \\  __ \\  \\ \\ \\____  \\ \\____ \\  \\/_/\\ \\/ \\/_/\\/_/_  "
     echo " \\ \\_\\ \\_\\  \\ \\_\\\\\"\\_\\  \\ \\_\\ \\_\\  \\ \\_____\\  \\/\\_____\\    \\ \\_\\  /\\/_\\/\\_\\ "
     echo "  \\/_/\\/_/   \\/_/ \\/_/   \\/_/\\/_/   \\/_____/   \\/_____/     \\/_/   \\/_/\\/_/ "
-    echo -e "\n${HEADER_COLOR}                                                                version 0.1 ${NC}"
+    echo -e "\n${WHITE_BACKGROUND}                                                              version ${VERSION} ${DEFAULT_COLOR}"
 }
 
+function loading() {
+    bars=( ' Analyzing |' ' Analyzing /' ' Analyzing -' ' Analyzing \\' ) 
+    while true; do
+        for i in "${bars[@]}"; do
+            echo -ne "\r"
+            echo -ne "${CYAN_B} \r$i ${DEFAULT_COLOR} ${domain} "
+            sleep 0.05
+        done
+    done
+}
+
+function isDomainRegistered() {
+    if [[ $1 == *"No match for"* ]]; then
+        whois_status="Not registered"
+        return 0
+    fi
+    whois_status="Registered"
+}
+
+#
+# Parse argument
+#
 domain=$1
-
 domain="${domain#https://}"
-# Remove "http://"
 domain="${domain#http://}"
-
-# echo "$domain"
 
 if [[ $domain == '' ]]; then
     showHelp
@@ -65,15 +81,19 @@ fi
 # Display the logo
 #
 logo
-echo -e "\n${CYAN} Analyzing ${NC} ${domain}"
+echo -e "\e[?25l"
 
+#
+# Loading queries process
+#
+loading &
+
+#
+# dig command
+#
 A=$(dig "${domain}" +short A | grep -v "Warning: Client COOKIE mismatch")
 NS=$(dig "${domain}" +short NS | grep -v "Warning: Client COOKIE mismatch")
 MX=$(dig "${domain}" +short MX | grep -v "Warning: Client COOKIE mismatch")
-whois_output=$(whois "$domain")
-registrar=$(echo "${whois_output}" | grep -i -m 1 "Registrar:" | sed 's/Registrar://I' | awk '{$1=$1};1')
-registrant=$(echo "${whois_output}" | awk -F ':' '/Registrant Name/{print $2}' | sed 's/^\s*//')
-
 
 if [ -z "$A" ]; then
     A="Unknown"
@@ -85,43 +105,57 @@ if [ -z "$MX" ]; then
     MX="Unknown"
 fi
 
-
-if [[ "$whois_output" == *"No match for"* ]]; then
-  whois_output="Not registered"
-else
-  whois_output="Registered"
-fi
-
-check_ssl=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -checkend 0 -noout)
-
-if [ "${check_ssl}" ]; then
-    ssl_status="Valid"
-else
-    ssl_status="Not valid"
-
-fi
+#
+# whois command
+#
+whois_output=$(whois "$domain")
+isDomainRegistered "${whois_output}"
+registrar=$(echo "${whois_output}" | grep -i -m 1 "Registrar:" | sed 's/Registrar://I' | awk '{$1=$1};1')
+registrant=$(echo "${whois_output}" | awk -F ':' '/Registrant Name/{print $2}' | sed 's/^\s*//')
+owner=$(echo "${whois_output}" | grep -i -m 1 "owner:" | sed 's/owner://I' | awk '{$1=$1};1')
+person=$(echo "${whois_output}" | grep -i -m 1 "person:" | sed 's/person://I' | awk '{$1=$1};1')
 
 #
+# openssl comand
+#
+ssl_status=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -checkend 0)
+ssl_issuer=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -issuer)
+ssl_dates=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -dates | tr -d "\n")
+
+#
+# pageload
+#
+pageload=$(curl -s -w 'Lookup Time:\t\t%{time_namelookup}\nConnect Time:\t\t%{time_connect}\nPre-transfer Time:\t%{time_pretransfer}\nStart-transfer Time:\t%{time_starttransfer}\n\nTotal Time:\t\t%{time_total}\n' -o /dev/null "${domain}")
+
+#
+# Printing domain info
+#
+kill $!
+echo -ne "\r"
+echo -ne "${CYAN_B} \r Analyzing ✔ ${DEFAULT_COLOR} ${domain}\n"
 
 echo -e "
-${BLUE}A Record${NC}\n${A} 
+${BLUE}A Record${DEFAULT_COLOR}\n${A} 
 
-${BLUE}NS Record${NC}\n${NS} 
+${BLUE}NS Record${DEFAULT_COLOR}\n${NS} 
 
-${BLUE}MX Record${NC}\n${MX} 
+${BLUE}MX Record${DEFAULT_COLOR}\n${MX} 
 
-${BLUE}Whois${NC}
-Status: ${whois_output}
+${BLUE}Whois${DEFAULT_COLOR}
+Status: ${whois_status}
 Registrar: ${registrar}
-Owner: ${registrant}
-Access: www.${domain}
+Registrant: ${registrant}
+Owner: ${owner}
+Person: ${person}
+Access: \e[4mwww.${domain}\e[0m
 
-${BLUE}SSL Certificate${NC}
+${BLUE}SSL Certificate${DEFAULT_COLOR}
+Issuer: ${ssl_issuer}
 Status: ${ssl_status}
-"
-pageload=$(curl -s -w '%{time_total}' -o /dev/null "${domain}")
-echo  -e "${BLUE}PageLoad${NC}\n${pageload}\n"
+Date: ${ssl_dates}"
 
+echo -e "
+${BLUE}Page Load${DEFAULT_COLOR}
+${pageload}"
 
-
-
+echo -e "\e[?25h"
