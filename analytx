@@ -3,8 +3,8 @@
 #
 # @description  Website analytics tool.
 # @author	Marcelo Corrêa <macorrea-@hotmail.com>
-# @requires     bash v4+, curl v7.56+, jq v1.6+, sysstat 10.1+
-# @version	0.1
+# @requires     dig v9.18+, curl v8.1+, bash 5.1+
+# @version	0.1.2
 #
 
 #
@@ -15,7 +15,7 @@ PINK='\033[35m'
 CYAN_B='\033[30;46m'
 WHITE_BACKGROUND='\033[30;47m'
 DEFAULT_COLOR='\033[0m'
-VERSION='0.1.1'
+VERSION='0.1.2'
 
 #
 # Methods
@@ -46,23 +46,101 @@ function logo() {
     echo -e "\n${WHITE_BACKGROUND}                                                              version ${VERSION} ${DEFAULT_COLOR}"
 }
 
-function loading() {
-    bars=( ' Analyzing |' ' Analyzing /' ' Analyzing -' ' Analyzing \\' ) 
+function loadingQueries() {
+    # local bars=( '|' '/' '-' '\\' )
+    # local bars=("⣷" "⣯" "⣟" "⡿" "⢿" "⣻" "⣽" "⣾")
+    # local bars=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    local bars=('⠁' '⠈' '⠐' '⠠' '⢀' '⡀' '⠄' '⠂')
     while true; do
         for i in "${bars[@]}"; do
             echo -ne "\r"
-            echo -ne "${CYAN_B} \r$i ${DEFAULT_COLOR} ${domain} "
-            sleep 0.05
+            echo -ne "${CYAN_B} \r Analyzing $i ${DEFAULT_COLOR} ${domain} "
+            sleep 0.08
         done
     done
 }
 
 function isDomainRegistered() {
-    if [[ $1 == *"No match for"* ]]; then
+    if [[ $1 == *"No match"* ]]; then
         whois_status="Not registered"
         return 0
     fi
     whois_status="Registered"
+    return 1
+}
+
+function getDomainEntries() {
+    A=$(dig "${domain}" +short A | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
+    NS=$(dig "${domain}" +short NS | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
+    MX=$(dig "${domain}" +short MX | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
+    return 0
+}
+
+function getDomainInfo() {
+    whois_output=$(whois "$domain")
+    isDomainRegistered "${whois_output}"
+
+    if echo "${domain}" | grep -q "\.br$"; then
+        owner=$(echo "${whois_output}" | grep -i -m 1 "owner:" | sed 's/owner://I' | awk '{$1=$1};1')
+        owner_id=$(echo "${whois_output}" | grep -i -m 1 "ownerid:" | sed 's/ownerid://I' | awk '{$1=$1};1')
+        person=$(echo "${whois_output}" | grep -i -m 1 "person:" | sed 's/person://I' | awk '{$1=$1};1')
+        user_email=$(echo "${whois_output}" | grep -i -m 1 "e-mail:" | sed 's/e-mail://I' | awk '{$1=$1};1')
+        date=$(echo "${whois_output}" | grep -i -m 1 "expires" | sed 's/expires://I' | awk '{$1=$1};1')
+        expiration_date=$(date -d "${date:0:4}-${date:4:2}-${date:6:2}" '+%Y-%m-%d')
+    else 
+        registrar=$(echo "${whois_output}" | grep -i -m 1 "Registrar:" | sed 's/Registrar://I' | awk '{$1=$1};1')
+        registrant=$(echo "${whois_output}" | awk -F ':' '/Registrant Name/{print $2}' | sed 's/^\s*//')
+        expiration_date=$(echo "${whois_output}" | awk -F ':' '/Registry Expiry Date/{print $2}' | sed 's/^\s*//')
+    fi
+}
+
+function checkCertificateStatus() {
+    ssl_status=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -checkend 0 || echo "Unknown")
+    ssl_issuer=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -issuer || echo "Unknown")
+    ssl_dates=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -dates | tr -d "\n" || echo "Unknown")
+    return 0
+}
+
+function checkPageload() {
+    pageload=$(curl -s -w 'Lookup Time:\t\t%{time_namelookup}\nConnect Time:\t\t%{time_connect}\nPre-transfer Time:\t%{time_pretransfer}\nStart-transfer Time:\t%{time_starttransfer}\n\nTotal Time:\t\t%{time_total}\n' -o /dev/null "${domain}")
+    return 0
+}
+
+function showDomainDns() {
+    echo -e "${BLUE}A Record${DEFAULT_COLOR}\n${A}\n" 
+    echo -e "${BLUE}NS Record${DEFAULT_COLOR}\n${NS}\n" 
+    echo -e "${BLUE}MX Record${DEFAULT_COLOR}\n${MX}\n" 
+}
+
+function showDomainInfo() {
+    echo -e "${BLUE}Whois${DEFAULT_COLOR}"
+    echo -e "Status: ${whois_status}"
+    if echo "${domain}" | grep -q "\.br$"; then
+        echo -e "Owner: ${owner}"
+        echo -e "E-mail: ${user_email}"
+        echo -e "Person: ${person}"
+        echo -e "User ID: ${owner_id}"
+        echo -e "Expires: ${expiration_date}"
+    else
+        echo -e "Registrar: ${registrar}"
+        echo -e "Registrant: ${registrant}"
+        echo -e "Expires: ${expiration_date}"
+    fi
+    
+    if [ "$whois_status" == "Registered" ]; then
+        echo -e "Access: \e[4mwww.${domain}\e[0m\n"
+    fi
+}
+
+function showDomainCertificate() {
+    echo -e "${BLUE}SSL Certificate${DEFAULT_COLOR}"
+    echo -e "Status: ${ssl_status}"
+    echo -e "Issuer: ${ssl_issuer}"
+    echo -e "Date: ${ssl_dates}\n"
+}
+
+function showPageload() {
+    echo -e "${BLUE}Page Load${DEFAULT_COLOR}\n${pageload}"
 }
 
 #
@@ -78,85 +156,30 @@ if [[ $domain == '' ]]; then
 fi
 
 #
-# Display the logo
+# Display program logo
 #
 logo
 echo -e "\e[?25l"
 
 #
-# Loading queries 
+# Methods call 
 #
-loading &
-loadingPid=$!
-
-#
-# dig command
-#
-A=$(dig "${domain}" +short A | grep -v "Warning: Client COOKIE mismatch")
-NS=$(dig "${domain}" +short NS | grep -v "Warning: Client COOKIE mismatch")
-MX=$(dig "${domain}" +short MX | grep -v "Warning: Client COOKIE mismatch")
-
-if [ -z "$A" ]; then
-    A="Unknown"
-fi
-if [ -z "$NS" ]; then
-    NS="Unknown"
-fi
-if [ -z "$MX" ]; then
-    MX="Unknown"
-fi
-
-#
-# whois command
-#
-whois_output=$(whois "$domain")
-isDomainRegistered "${whois_output}"
-registrar=$(echo "${whois_output}" | grep -i -m 1 "Registrar:" | sed 's/Registrar://I' | awk '{$1=$1};1')
-registrant=$(echo "${whois_output}" | awk -F ':' '/Registrant Name/{print $2}' | sed 's/^\s*//')
-owner=$(echo "${whois_output}" | grep -i -m 1 "owner:" | sed 's/owner://I' | awk '{$1=$1};1')
-person=$(echo "${whois_output}" | grep -i -m 1 "person:" | sed 's/person://I' | awk '{$1=$1};1')
-
-#
-# openssl comand
-#
-ssl_status=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -checkend 0)
-ssl_issuer=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -issuer)
-ssl_dates=$(openssl s_client -connect "${domain}:443" -servername "${domain}" < /dev/null 2>/dev/null | openssl x509 -noout -dates | tr -d "\n")
-
-#
-# pageload
-#
-pageload=$(curl -s -w 'Lookup Time:\t\t%{time_namelookup}\nConnect Time:\t\t%{time_connect}\nPre-transfer Time:\t%{time_pretransfer}\nStart-transfer Time:\t%{time_starttransfer}\n\nTotal Time:\t\t%{time_total}\n' -o /dev/null "${domain}")
+loadingQueries &
+loadindProcessPid=$!
+getDomainEntries
+getDomainInfo
+checkCertificateStatus
+checkPageload
 
 #
 # Printing domain info
 #
-kill "$loadingPid"
+kill $loadindProcessPid
 echo -ne "\r"
-echo -ne "${CYAN_B} \r Completed ✔ ${DEFAULT_COLOR} ${domain}\n"
-
-echo -e "
-${BLUE}A Record${DEFAULT_COLOR}\n${A} 
-
-${BLUE}NS Record${DEFAULT_COLOR}\n${NS} 
-
-${BLUE}MX Record${DEFAULT_COLOR}\n${MX} 
-
-${BLUE}Whois${DEFAULT_COLOR}
-Status: ${whois_status}
-Registrar: ${registrar}
-Registrant: ${registrant}
-Owner: ${owner}
-Person: ${person}
-Access: \e[4mwww.${domain}\e[0m
-
-${BLUE}SSL Certificate${DEFAULT_COLOR}
-Status: ${ssl_status}
-Issuer: ${ssl_issuer}
-Date: ${ssl_dates}"
-
-echo -e "
-${BLUE}Page Load${DEFAULT_COLOR}
-${pageload}"
+echo -ne "${CYAN_B} \r Completed ✔ ${DEFAULT_COLOR} ${domain}\n\n"
+showDomainDns
+showDomainInfo
+showDomainCertificate
+showPageload
 
 echo -e "\e[?25h"
