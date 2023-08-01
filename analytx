@@ -155,7 +155,7 @@ function printDnsRecordsMX() {
 }
 
 function printDomainInfo() {
-    echo -e "${BLUE}Whois${DEFAULT_COLOR}"
+    echo -e "${BLUE}Domain Information${DEFAULT_COLOR}"
     echo -e "Status:\t\t\t\t${whois_status}"
     if echo "${domain}" | grep -q "\.br$"; then
         echo -e "Owner:\t\t\t\t${owner}"
