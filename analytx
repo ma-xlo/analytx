@@ -69,7 +69,7 @@ function isDomainRegistered() {
     return 1
 }
 
-function getDomainEntries() {
+function getDomainDnsEntries() {
     A=$(dig "${domain}" +short A | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
     NS=$(dig "${domain}" +short NS | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
     MX=$(dig "${domain}" +short MX | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
@@ -164,8 +164,8 @@ function printDomainInfo() {
         echo -e "User ID:\t\t\t${owner_id}"
         echo -e "Expires:\t\t\t${expiration_date}"
     else
-        echo -e "Registrar:\t\t\t\t${registrar}"
-        echo -e "Registrant:\t\t\t\t${registrant}"
+        echo -e "Registrar:\t\t\t${registrar}"
+        echo -e "Registrant:\t\t\t${registrant}"
         echo -e "Expires:\t\t\t${expiration_date}"
     fi
     
@@ -215,7 +215,7 @@ trap closeProgram SIGINT
 #
 loadingQueries &
 loadindProcessPid=$!
-getDomainEntries
+getDomainDnsEntries
 getDomainInfo
 checkCertificateStatus
 checkPageload
