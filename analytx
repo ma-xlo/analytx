@@ -102,44 +102,86 @@ function checkCertificateStatus() {
 }
 
 function checkPageload() {
-    pageload=$(curl -s -w 'Lookup Time:\t\t%{time_namelookup}\nConnect Time:\t\t%{time_connect}\nPre-transfer Time:\t%{time_pretransfer}\nStart-transfer Time:\t%{time_starttransfer}\n\nTotal Time:\t\t%{time_total}\n' -o /dev/null "${domain}")
+    pageload=$(curl -s -w 'Lookup Time:\t\t\t%{time_namelookup}\nConnect Time:\t\t\t%{time_connect}\nPre-transfer Time:\t\t%{time_pretransfer}\nStart-transfer Time:\t\t%{time_starttransfer}\n\nTotal Time:\t\t\t%{time_total}\n' -o /dev/null "${domain}")
     return 0
 }
 
-function showDomainDns() {
-    echo -e "${BLUE}A Record${DEFAULT_COLOR}\n${A}\n" 
-    echo -e "${BLUE}NS Record${DEFAULT_COLOR}\n${NS}\n" 
-    echo -e "${BLUE}MX Record${DEFAULT_COLOR}\n${MX}\n" 
+function printDnsRecordsA() {
+    echo -e "${BLUE}A Record${DEFAULT_COLOR}"
+
+    A=$(echo "$A" | tr '\n' ' ')
+    IFS=' ' read -r -a entriesArray <<< "$A"
+
+    for i in "${!entriesArray[@]}"; do
+        index=$((i + 1))
+        if [ "$i" -ne $(( ${#entriesArray[@]} - 1 )) ]; then
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}"
+        else 
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}\n"
+        fi
+    done
 }
 
-function showDomainInfo() {
+function printDnsRecordsNS() {
+    echo -e "${BLUE}NS Record${DEFAULT_COLOR}"
+
+    NS=$(echo "$NS" | tr '\n' ' ')
+    IFS=' ' read -r -a entriesArray <<< "$NS"
+
+    for i in "${!entriesArray[@]}"; do
+        index=$((i + 1))
+        if [ "$i" -ne $(( ${#entriesArray[@]} - 1 )) ]; then
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}"
+        else 
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}\n"
+        fi
+    done
+}
+
+function printDnsRecordsMX() {
+    echo -e "${BLUE}MX Record${DEFAULT_COLOR}"
+
+    MX=$(echo "$MX" | tr '\n' ' ')
+    IFS=' ' read -r -a entriesArray <<< "$MX"
+
+    for i in "${!entriesArray[@]}"; do
+        index=$((i + 1))
+        if [ "$i" -ne $(( ${#entriesArray[@]} - 1 )) ]; then
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}"
+        else 
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}\n"
+        fi
+    done
+}
+
+function printDomainInfo() {
     echo -e "${BLUE}Whois${DEFAULT_COLOR}"
-    echo -e "Status: ${whois_status}"
+    echo -e "Status:\t\t\t\t${whois_status}"
     if echo "${domain}" | grep -q "\.br$"; then
-        echo -e "Owner: ${owner}"
-        echo -e "E-mail: ${user_email}"
-        echo -e "Person: ${person}"
-        echo -e "User ID: ${owner_id}"
-        echo -e "Expires: ${expiration_date}"
+        echo -e "Owner:\t\t\t\t${owner}"
+        echo -e "E-mail:\t\t\t\t${user_email}"
+        echo -e "Person:\t\t\t\t${person}"
+        echo -e "User ID:\t\t\t${owner_id}"
+        echo -e "Expires:\t\t\t${expiration_date}"
     else
-        echo -e "Registrar: ${registrar}"
-        echo -e "Registrant: ${registrant}"
-        echo -e "Expires: ${expiration_date}"
+        echo -e "Registrar:\t\t\t\t${registrar}"
+        echo -e "Registrant:\t\t\t\t${registrant}"
+        echo -e "Expires:\t\t\t${expiration_date}"
     fi
     
     if [ "$whois_status" == "Registered" ]; then
-        echo -e "Access: \e[4mwww.${domain}\e[0m\n"
+        echo -e "Access:\t\t\t\t\e[4mwww.${domain}\e[0m\n"
     fi
 }
 
-function showDomainCertificate() {
+function printDomainCertificate() {
     echo -e "${BLUE}SSL Certificate${DEFAULT_COLOR}"
-    echo -e "Status: ${ssl_status}"
-    echo -e "Issuer: ${ssl_issuer}"
-    echo -e "Date: ${ssl_dates}\n"
+    echo -e "Status:\t\t\t\t${ssl_status}"
+    echo -e "Issuer:\t\t\t\t${ssl_issuer}"
+    echo -e "Date:\t\t\t\t${ssl_dates}\n"
 }
 
-function showPageload() {
+function printPageload() {
     echo -e "${BLUE}Page Load${DEFAULT_COLOR}\n${pageload}"
 }
 
@@ -184,9 +226,11 @@ checkPageload
 kill $loadindProcessPid
 echo -ne "\r"
 echo -ne "${CYAN_B} \r Completed ✔ ${DEFAULT_COLOR} ${domain}\n\n"
-showDomainDns
-showDomainInfo
-showDomainCertificate
-showPageload
+printDnsRecordsA
+printDnsRecordsNS
+printDnsRecordsMX
+printDomainInfo
+printDomainCertificate
+printPageload
 
 echo -e "\e[?25h"
