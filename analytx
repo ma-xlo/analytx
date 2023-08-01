@@ -49,8 +49,8 @@ function logo() {
 function loadingQueries() {
     # local bars=( '|' '/' '-' '\\' )
     # local bars=("⣷" "⣯" "⣟" "⡿" "⢿" "⣻" "⣽" "⣾")
-    # local bars=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-    local bars=('⠁' '⠈' '⠐' '⠠' '⢀' '⡀' '⠄' '⠂')
+    local bars=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+    # local bars=('⠁' '⠈' '⠐' '⠠' '⢀' '⡀' '⠄' '⠂')
     while true; do
         for i in "${bars[@]}"; do
             echo -ne "\r"
@@ -143,6 +143,12 @@ function showPageload() {
     echo -e "${BLUE}Page Load${DEFAULT_COLOR}\n${pageload}"
 }
 
+function closeProgram() {
+    echo -e "\e[?25h"
+    # Add any cleanup or exit actions here, if needed.
+    exit 1
+}
+
 #
 # Parse argument
 #
@@ -160,6 +166,7 @@ fi
 #
 logo
 echo -e "\e[?25l"
+trap closeProgram SIGINT
 
 #
 # Methods call 
