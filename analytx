@@ -191,6 +191,18 @@ function closeProgram() {
     exit 1
 }
 
+function updateAnalytx(){
+
+    local currentDir=pwd
+
+    cd ~/.config/analytx || return
+
+    git pull
+
+    cd "$currentDir" || return
+
+}
+
 #
 # Parse argument
 #
@@ -198,9 +210,14 @@ domain=$1
 domain="${domain#https://}"
 domain="${domain#http://}"
 
-if [[ $domain == '' ]]; then
+if [[ $1 == '' ]]; then
     showHelp
     exit
+fi
+
+if [[ $1 == 'update' ]]; then
+    updateAnalytx
+    kill $$
 fi
 
 #
