@@ -9,3 +9,8 @@ sh install.sh
 ### How To Uninstall
 Just remove the dir `~/.config/analytx` and remove the line `PATH=$PATH:/home/ma-xlo/.config/analytx` in `~/.bashrc` 
 
+### How To Get Update
+##### Run
+```
+analytx update
+```
