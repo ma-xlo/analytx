@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 set -e
 
@@ -7,7 +7,7 @@ PROGRAM_DIR="analytx"
 PROGRAM_PATH="$INSTALLATION_PATH/$PROGRAM_DIR"
 CURRENT_DIR=$(pwd)
 
-function getRemoteRepository() {
+getRemoteRepository() {
     if [ -d "$PROGRAM_PATH" ]; then
         echo "Analytx is already installed. Checking updates..."
         cd "$PROGRAM_PATH" && git pull
@@ -19,11 +19,11 @@ function getRemoteRepository() {
 
 }
 
-function giveFilePermission() {
+giveFilePermission() {
     chmod +x "$PROGRAM_PATH/analytx"
 }
 
-function isAnalytxAlreadyInPath() {
+isAnalytxAlreadyInPath() {
     if ! grep -q "$PROGRAM_PATH" "$HOME/.bashrc"; then
         echo "Adding Analytx to PATH..."
         echo "PATH=\$PATH:$PROGRAM_PATH" >> "$HOME/.bashrc"
