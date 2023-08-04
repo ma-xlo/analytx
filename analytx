@@ -193,9 +193,10 @@ function closeProgram() {
 
 function updateAnalytx(){
 
-    local currentDir=pwd
+    local currentDir
+    currentDir=$(pwd)
 
-    cd ~/.config/analytx || return
+    cd "$HOME/.config/analytx" || return
 
     git pull
 
