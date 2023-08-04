@@ -4,7 +4,7 @@
 # @description  Website analytics tool.
 # @author	Marcelo Corrêa <macorrea-@hotmail.com>
 # @requires     dig v9.18+, curl v8.1+, bash 5.1+
-# @version	0.1.2
+# @version	0.0.2
 #
 
 #
@@ -15,7 +15,7 @@ PINK='\033[35m'
 CYAN_B='\033[30;46m'
 WHITE_BACKGROUND='\033[30;47m'
 DEFAULT_COLOR='\033[0m'
-VERSION='0.1.2'
+VERSION='0.0.2'
 
 #
 # Methods
@@ -47,10 +47,7 @@ function logo() {
 }
 
 function loadingQueries() {
-    # local bars=( '|' '/' '-' '\\' )
-    # local bars=("⣷" "⣯" "⣟" "⡿" "⢿" "⣻" "⣽" "⣾")
     local bars=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-    # local bars=('⠁' '⠈' '⠐' '⠠' '⢀' '⡀' '⠄' '⠂')
     while true; do
         for i in "${bars[@]}"; do
             echo -ne "\r"
