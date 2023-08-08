@@ -3,12 +3,12 @@
 #
 # @description  Website analytics tool.
 # @author	Marcelo Corrêa <macorrea-@hotmail.com>
-# @requires     dig v9.18+, curl v8.1+, bash 5.1+
+# @requires     dig v9.18+, curl v8.1+, bash 5.1+, 
 # @version	0.0.2
 #
 
 #
-# Define constants variables
+# Constants variables
 #
 BLUE='\033[34m'
 PINK='\033[35m'
@@ -38,7 +38,7 @@ EOF
 }
 
 function logo() {
-    echo -e "${PINK}"
+    echo -e -n "${PINK}"
     echo " ______     __   __     ______     __         __  __     ______   __  __"
     echo "/\\  __ \\   /\\ \"-.\\ \\   /\\  __ \\   /\\ \\       /\\ \\_\\ \\   /\\__  _\\ /\\_\\_\\_\\"
     echo "\\ \\  __ \\  \\ \\ \\-.  \\  \\ \\  __ \\  \\ \\ \\____  \\ \\____ \\  \\/_/\\ \\/ \\/_/\\/_/"
