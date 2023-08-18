@@ -100,6 +100,7 @@ function getDomainDnsEntries() {
     A=$(dig "${domain}" +short A | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
     NS=$(dig "${domain}" +short NS | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
     MX=$(dig "${domain}" +short MX | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
+    txtEntry=$(dig "${domain}" +short TXT | grep -v "Warning: Client COOKIE mismatch" || echo "Unknown")
     return 0
 }
 
@@ -130,9 +131,9 @@ function checkCertificateStatus() {
 
 function checkPageload() {
     # pageload=$(curl -s -w 'Lookup Time:\t\t\t%{time_namelookup}\nConnect Time:\t\t\t%{time_connect}\nPre-transfer Time:\t\t%{time_pretransfer}\nStart-transfer Time:\t\t%{time_starttransfer}\n\nTotal Time:\t\t\t%{time_total}\n' -o /dev/null "${domain}")
-    pageload=$(curl -so /dev/null -w "Connect: %{time_connect}
-TTFB: %{time_starttransfer}
-Total time: %{time_total}\n" -kILH "host: ${domain}" "${domain}")
+    pageload=$(curl -so /dev/null -w "Connect:\t\t\t%{time_connect}
+TTFB:\t\t\t\t%{time_starttransfer}
+Total time:\t\t\t%{time_total}\n" -kILH "host: ${domain}" "${domain}")
     return 0
 }
 
@@ -184,6 +185,23 @@ function printDnsRecordsMX() {
     done
 }
 
+function printDnsRecordsTXT() {
+    echo -e "${BLUE}TXT Record${DEFAULT_COLOR}"
+
+    txtEntry=$(echo "$txtEntry" | tr '\n' ' ')
+    IFS=' ' read -r -a entriesArray <<< "$txtEntry"
+
+    for i in "${!entriesArray[@]}"; do
+        index=$((i + 1))
+        if [ "$i" -ne $(( ${#entriesArray[@]} - 1 )) ]; then
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}"
+        else 
+            echo -e "Entry $index:\t\t\t${entriesArray[i]}\n"
+        fi
+    done
+}
+
+
 function printDomainInfo() {
     echo -e "${BLUE}Domain Information${DEFAULT_COLOR}"
     echo -e "Status:\t\t\t\t${whois_status}"
@@ -204,7 +222,7 @@ function printDomainInfo() {
     fi
 }
 
-function printDomainCertificate() {
+function printCertificateStatus() {
     echo -e "${BLUE}SSL Certificate${DEFAULT_COLOR}"
     echo -e "Status:\t\t\t\t${ssl_status}"
     echo -e "Issuer:\t\t\t\t${ssl_issuer}"
@@ -234,6 +252,23 @@ function updateAnalytx(){
 
 }
 
+function getIpInfo() {
+    queryResult=$(curl -s ipinfo.io/"$1"?"${IP_INFO_TOKEN}")
+    parseJsonIpInfo "$queryResult"
+}
+
+function showIpInfo() {
+    echo -e "${BLUE}IP Address Information${DEFAULT_COLOR}"
+    echo -e "Hostname:\t\t\t$hostname"
+    echo -e "City:\t\t\t\t$city"
+    echo -e "Region:\t\t\t\t$region"
+    echo -e "Country:\t\t\t$country"
+    echo -e "Latitude:\t\t\t$latitude"
+    echo -e "Longitude:\t\t\t$longitude"
+    echo -e "Organization:\t\t\t$org"
+    echo -e "\e[?25h"
+}
+
 #
 # IP address option
 #
@@ -247,22 +282,12 @@ if isValidIp "$1"; then
     loadingQueries &
     loadindProcessPid=$!
 
-    queryResult=$(curl -s ipinfo.io/"$1"?"${IP_INFO_TOKEN}")
-    parseJsonIpInfo "$queryResult"
+    getIpInfo "$1"
 
     kill $loadindProcessPid
     echo -ne "\r"
     echo -ne "${CYAN_B} \r Completed ✔ ${DEFAULT_COLOR} ${ipAddress}\n\n"
-    echo -e "${BLUE}IP Address Information${DEFAULT_COLOR}"
-    echo -e "Hostname:\t\t\t\t$hostname"
-    echo -e "City:\t\t\t\t\t$city"
-    echo -e "Region:\t\t\t\t\t$region"
-    echo -e "Country:\t\t\t\t$country"
-    echo -e "Latitude:\t\t\t\t$latitude"
-    echo -e "Longitude:\t\t\t\t$longitude"
-    echo -e "Organization:\t\t\t\t$org"
-    echo -e "\e[?25h"
-
+    showIpInfo
     exit 0
 fi
 
@@ -291,6 +316,10 @@ trap closeProgram SIGINT
 loadingQueries &
 loadindProcessPid=$!
 getDomainDnsEntries
+
+ipAddress=$(echo "$A" | tr '\n' ' ')
+getIpInfo "$ipAddress"
+
 getDomainInfo
 checkCertificateStatus
 checkPageload
@@ -301,8 +330,10 @@ echo -ne "${CYAN_B} \r Completed ✔ ${DEFAULT_COLOR} ${domain}\n\n"
 printDnsRecordsA
 printDnsRecordsNS
 printDnsRecordsMX
+printDnsRecordsTXT
 printDomainInfo
-printDomainCertificate
+showIpInfo
+printCertificateStatus
 printPageload
 
 echo -e "\e[?25h"
