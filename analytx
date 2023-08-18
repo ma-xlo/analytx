@@ -317,7 +317,7 @@ loadingQueries &
 loadindProcessPid=$!
 getDomainDnsEntries
 
-ipAddress=$(echo "$A" | tr '\n' ' ')
+ipAddress=$(echo -e "$A" | head -n 1)
 getIpInfo "$ipAddress"
 
 getDomainInfo
